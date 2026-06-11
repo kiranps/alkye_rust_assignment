@@ -6,6 +6,7 @@ use crate::jwt::validate_token;
 use crate::models::AuthUser;
 use crate::state::AppState;
 
+#[derive(Debug)]
 pub enum AuthError {
     Unauthorized,
     Internal,
@@ -46,4 +47,29 @@ pub fn require_admin(user: &AuthUser) -> Result<(), AuthError> {
         return Err(AuthError::Unauthorized);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::AuthUser;
+
+    #[test]
+    fn test_require_admin_allows_admin() {
+        let user = AuthUser { id: 1, email: "admin@test.com".into(), role: "admin".into() };
+        assert!(require_admin(&user).is_ok());
+    }
+
+    #[test]
+    fn test_require_admin_rejects_staff() {
+        let user = AuthUser { id: 2, email: "staff@test.com".into(), role: "staff".into() };
+        let err = require_admin(&user).unwrap_err();
+        assert!(matches!(err, AuthError::Unauthorized));
+    }
+
+    #[test]
+    fn test_require_admin_rejects_unknown_role() {
+        let user = AuthUser { id: 3, email: "x@test.com".into(), role: "viewer".into() };
+        assert!(require_admin(&user).is_err());
+    }
 }

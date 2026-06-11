@@ -1,7 +1,7 @@
 [package]
 name = "assignment"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
 axum = "0.8"
@@ -16,3 +16,7 @@ chrono = { version = "0.4", features = ["serde"] }
 jsonwebtoken = "9"
 dotenvy = "0.15"
 anyhow = "1"
+
+[dev-dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+tokio = { version = "1", features = ["rt", "macros"] }

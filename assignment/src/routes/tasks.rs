@@ -82,6 +82,108 @@ fn build_response(user: &AuthUser, task_list: &[Task]) -> ViewMyTasksResponse {
     make_response(user, task_list, false)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+
+    fn task_fixture(task_id: i32, assigned: Option<i32>) -> Task {
+        Task {
+            id: task_id,
+            title: format!("Task {}", task_id),
+            description: None,
+            created_by: 1,
+            assigned_to: assigned,
+            status: "todo".into(),
+            priority: "medium".into(),
+            created_at: Utc::now().naive_utc(),
+            updated_at: Utc::now().naive_utc(),
+        }
+    }
+
+    fn user_fixture(user_id: i32, role: &str) -> AuthUser {
+        AuthUser {
+            id: user_id,
+            email: format!("{}@test.com", role),
+            role: role.into(),
+        }
+    }
+
+    #[test]
+    fn test_cache_key_user() {
+        assert_eq!(cache_key_user(42), "tasks:user:42");
+        assert_eq!(cache_key_user(0), "tasks:user:0");
+        assert_eq!(cache_key_user(999), "tasks:user:999");
+    }
+
+    #[test]
+    fn test_make_task_view() {
+        let task = task_fixture(1, Some(5));
+        let view = make_task_view(&task, "user@example.com");
+
+        assert_eq!(view.id, 1);
+        assert_eq!(view.title, "Task 1");
+        assert_eq!(view.status, "todo");
+        assert_eq!(view.priority, "medium");
+        assert_eq!(view.assigned_to, "user@example.com");
+    }
+
+    #[test]
+    fn test_make_response_with_tasks() {
+        let user = user_fixture(1, "staff");
+        let list = vec![task_fixture(10, Some(1)), task_fixture(20, Some(1))];
+        let resp = make_response(&user, &list, false);
+
+        assert_eq!(resp.user.email, "staff@test.com");
+        assert_eq!(resp.user.role, "staff");
+        assert_eq!(resp.tasks.len(), 2);
+        assert_eq!(resp.tasks[0].id, 10);
+        assert_eq!(resp.tasks[1].id, 20);
+        assert_eq!(resp.summary.total_assigned_tasks, 2);
+        assert!(!resp.cache.hit);
+    }
+
+    #[test]
+    fn test_make_response_empty_tasks() {
+        let user = user_fixture(2, "admin");
+        let resp = make_response(&user, &[], true);
+
+        assert_eq!(resp.user.email, "admin@test.com");
+        assert!(resp.tasks.is_empty());
+        assert_eq!(resp.summary.total_assigned_tasks, 0);
+        assert!(resp.cache.hit);
+    }
+
+    #[test]
+    fn test_build_response_sets_cache_miss() {
+        let user = user_fixture(1, "staff");
+        let resp = build_response(&user, &[task_fixture(1, Some(1))]);
+        assert!(!resp.cache.hit);
+    }
+
+    #[test]
+    fn test_make_task_view_preserves_all_fields() {
+        let task = Task {
+            id: 99,
+            title: "Urgent bug".into(),
+            description: Some("fix it".into()),
+            created_by: 2,
+            assigned_to: Some(3),
+            status: "in_progress".into(),
+            priority: "high".into(),
+            created_at: Utc::now().naive_utc(),
+            updated_at: Utc::now().naive_utc(),
+        };
+        let view = make_task_view(&task, "dev@example.com");
+
+        assert_eq!(view.id, 99);
+        assert_eq!(view.title, "Urgent bug");
+        assert_eq!(view.status, "in_progress");
+        assert_eq!(view.priority, "high");
+        assert_eq!(view.assigned_to, "dev@example.com");
+    }
+}
+
 pub async fn create_task(
     State(state): State<AppState>,
     headers: HeaderMap,
