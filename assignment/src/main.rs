@@ -1,12 +1,23 @@
+mod auth;
+mod models;
 mod routes;
+mod schema;
 mod state;
 
 use anyhow::Context;
-use axum::routing::get;
 use axum::Router;
 use diesel::pg::PgConnection;
 use diesel::r2d2::ConnectionManager;
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use state::AppState;
+
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+
+fn run_migrations(pool: &diesel::r2d2::Pool<ConnectionManager<PgConnection>>) {
+    let mut conn = pool.get().expect("failed to get db connection for migrations");
+    conn.run_pending_migrations(MIGRATIONS)
+        .expect("migrations failed");
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -22,19 +33,22 @@ async fn main() -> anyhow::Result<()> {
         .build(manager)
         .context("failed to create database connection pool")?;
 
+    run_migrations(&db);
+
     let redis = redis::Client::open(redis_url).context("failed to create redis client")?;
 
     let state = AppState { db, redis };
 
     let app = Router::new()
-        .route("/ping", get(routes::ping::ping_handler))
+        .merge(routes::ping::routes())
+        .merge(routes::users::routes())
         .with_state(state);
+
+    println!("Server started on http://0.0.0.0:3000");
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
         .context("failed to bind address")?;
-
-    println!("Server started on http://0.0.0.0:3000");
 
     axum::serve(listener, app).await.context("server error")?;
 

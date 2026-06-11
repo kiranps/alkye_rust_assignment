@@ -1,15 +1,13 @@
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use axum::Json;
-use serde::Serialize;
+use axum::routing::get;
+use axum::Router;
+use serde_json::json;
 
-#[derive(Serialize)]
-pub struct PingResponse {
-    pub message: String,
+use crate::state::AppState;
+
+async fn ping_handler() -> impl axum::response::IntoResponse {
+    axum::Json(json!({ "message": "pong" }))
 }
 
-pub async fn ping_handler() -> impl IntoResponse {
-    (StatusCode::OK, Json(PingResponse {
-        message: "pong".to_string(),
-    }))
+pub fn routes() -> Router<AppState> {
+    Router::new().route("/ping", get(ping_handler))
 }
