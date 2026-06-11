@@ -24,7 +24,7 @@ pub struct NewUser {
     pub role: String,
 }
 
-#[derive(Queryable, Selectable, Serialize, Clone, Debug)]
+#[derive(Queryable, Selectable, Serialize, Deserialize, Clone, Debug)]
 #[diesel(table_name = tasks)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Task {
