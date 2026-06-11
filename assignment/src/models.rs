@@ -63,14 +63,37 @@ impl From<User> for UserResponse {
 
 #[derive(Serialize, Debug)]
 pub struct LoginResponse {
-    pub token: String,
-    pub user: UserResponse,
+    pub message: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Verify2faRequest {
+    pub code: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct Verify2faResponse {
+    pub token: String,
+    pub user: UserResponse,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct EmailLogEntry {
+    pub code: String,
+    pub user_id: i32,
+    pub username: String,
+    pub sent_at: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct EmailLogsResponse {
+    pub logs: Vec<EmailLogEntry>,
 }
 
 #[derive(Deserialize, Debug)]
