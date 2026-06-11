@@ -40,9 +40,7 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState { db, redis };
 
     let app = Router::new()
-        .merge(routes::ping::routes())
-        .merge(routes::users::routes())
-        .merge(routes::tasks::routes())
+        .merge(routes::routes())
         .with_state(state);
 
     println!("Server started on http://0.0.0.0:3000");

@@ -1,7 +1,6 @@
 use axum::extract::State;
 use axum::http::HeaderMap;
-use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::Json;
 use diesel::prelude::*;
 use serde_json::json;
 
@@ -10,7 +9,7 @@ use crate::models::*;
 use crate::schema::tasks::dsl::*;
 use crate::state::AppState;
 
-async fn create_task(
+pub async fn create_task(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(body): Json<CreateTaskRequest>,
@@ -41,7 +40,7 @@ async fn create_task(
     }))
 }
 
-async fn list_tasks(
+pub async fn list_tasks(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<Task>>, AuthError> {
@@ -58,7 +57,7 @@ async fn list_tasks(
     Ok(Json(list))
 }
 
-async fn view_my_tasks(
+pub async fn view_my_tasks(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<Task>>, AuthError> {
@@ -73,7 +72,7 @@ async fn view_my_tasks(
     Ok(Json(list))
 }
 
-async fn assign_task(
+pub async fn assign_task(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(body): Json<AssignTaskRequest>,
@@ -93,11 +92,4 @@ async fn assign_task(
     }
 
     Ok(Json(json!({ "message": "Task assigned successfully" })))
-}
-
-pub fn routes() -> Router<AppState> {
-    Router::new()
-        .route("/tasks", get(list_tasks).post(create_task))
-        .route("/tasks/assign", post(assign_task))
-        .route("/tasks/view-my-tasks", get(view_my_tasks))
 }
