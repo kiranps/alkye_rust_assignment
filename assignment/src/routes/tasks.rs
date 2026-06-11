@@ -12,10 +12,6 @@ use crate::state::AppState;
 
 const CACHE_TTL: u64 = 30;
 
-fn cache_key_all() -> String {
-    "tasks:all".into()
-}
-
 fn cache_key_user(uid: i32) -> String {
     format!("tasks:user:{}", uid)
 }
@@ -84,43 +80,6 @@ pub async fn create_task(
         title: inserted.title,
         status: inserted.status,
     }))
-}
-
-pub async fn list_tasks(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-) -> Result<Json<Vec<Task>>, AuthError> {
-    let user = authenticate(&headers, &state).await?;
-
-    let key = if user.role == "admin" {
-        cache_key_all()
-    } else {
-        cache_key_user(user.id)
-    };
-
-    let mut redis = state
-        .redis
-        .get_multiplexed_async_connection()
-        .await
-        .map_err(|_| AuthError::Internal)?;
-
-    if let Some(cached) = get_cached_tasks(&mut redis, &key).await? {
-        return Ok(Json(cached));
-    }
-
-    let mut conn = state.db.get().map_err(|_| AuthError::Internal)?;
-
-    let results = if user.role == "admin" {
-        tasks.load::<Task>(&mut conn)
-    } else {
-        tasks.filter(assigned_to.eq(user.id)).load::<Task>(&mut conn)
-    };
-
-    let list = results.map_err(|_| AuthError::Internal)?;
-
-    set_cached_tasks(&mut redis, &key, &list).await?;
-
-    Ok(Json(list))
 }
 
 pub async fn view_my_tasks(

@@ -17,7 +17,7 @@ pub fn routes() -> Router<AppState> {
         .route("/auth/verify-2fa", post(verify_2fa::verify_2fa_handler))
         .route("/dev/email-logs/latest", get(email_logs::email_logs_handler))
         .route("/seed/users", post(seed::seed_users_handler))
-        .route("/tasks", get(tasks::list_tasks).post(tasks::create_task))
+        .route("/tasks", post(tasks::create_task))
         .route("/tasks/assign", post(tasks::assign_task))
         .route("/tasks/view-my-tasks", get(tasks::view_my_tasks))
 }
