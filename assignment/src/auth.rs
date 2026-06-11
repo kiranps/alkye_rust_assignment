@@ -36,7 +36,7 @@ pub async fn authenticate(headers: &HeaderMap, _state: &AppState) -> Result<Auth
 
     Ok(AuthUser {
         id: claims.sub,
-        username: claims.username,
+        email: claims.email,
         role: claims.role,
     })
 }

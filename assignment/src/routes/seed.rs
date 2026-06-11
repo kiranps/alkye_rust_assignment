@@ -13,8 +13,18 @@ pub async fn seed_users_handler(
     let mut conn = state.db.get().map_err(|_| AuthError::Internal)?;
 
     let users_to_create = vec![
-        NewUser { username: "admin".into(), password: "admin123".into(), role: "admin".into() },
-        NewUser { username: "james_bond".into(), password: "bond123".into(), role: "user".into() },
+        NewUser {
+            username: "admin".into(),
+            email: "admin@example.com".into(),
+            password: "admin123".into(),
+            role: "admin".into(),
+        },
+        NewUser {
+            username: "james_bond".into(),
+            email: "jamesbond@example.com".into(),
+            password: "bond123".into(),
+            role: "staff".into(),
+        },
     ];
 
     for u in &users_to_create {

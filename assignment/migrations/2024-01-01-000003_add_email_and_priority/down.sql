@@ -1,0 +1,2 @@
+ALTER TABLE tasks DROP COLUMN priority;
+ALTER TABLE users DROP COLUMN email;

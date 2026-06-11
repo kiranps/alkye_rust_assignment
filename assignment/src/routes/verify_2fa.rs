@@ -30,7 +30,7 @@ pub async fn verify_2fa_handler(
         .ok_or(AuthError::Unauthorized)?;
 
     let user_id = data["user_id"].as_i64().ok_or(AuthError::Unauthorized)? as i32;
-    let username = data["username"].as_str().ok_or(AuthError::Unauthorized)?;
+    let email = data["email"].as_str().ok_or(AuthError::Unauthorized)?;
     let role = data["role"].as_str().ok_or(AuthError::Unauthorized)?;
 
     let _: () = redis::cmd("DEL")
@@ -39,13 +39,13 @@ pub async fn verify_2fa_handler(
         .await
         .map_err(|_| AuthError::Internal)?;
 
-    let token = create_token(user_id, username, role)?;
+    let token = create_token(user_id, email, role)?;
 
     Ok(Json(Verify2faResponse {
         token,
         user: UserResponse {
             id: user_id,
-            username: username.to_string(),
+            email: email.to_string(),
             role: role.to_string(),
         },
     }))

@@ -40,7 +40,7 @@ pub async fn login_handler(
     let code_key = format!("2fa_code:{}", code);
     let user_data = json!({
         "user_id": user.id,
-        "username": user.username,
+        "email": user.email,
         "role": user.role,
     });
 
@@ -60,7 +60,7 @@ pub async fn login_handler(
     let log_entry = EmailLogEntry {
         code: code.clone(),
         user_id: user.id,
-        username: user.username.clone(),
+        email: user.email.clone(),
         sent_at: now.to_string(),
     };
 

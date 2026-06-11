@@ -2,6 +2,7 @@ diesel::table! {
     users (id) {
         id -> Integer,
         username -> Text,
+        email -> Text,
         password -> Text,
         role -> Text,
         created_at -> Timestamp,
@@ -16,6 +17,7 @@ diesel::table! {
         created_by -> Integer,
         assigned_to -> Nullable<Integer>,
         status -> Text,
+        priority -> Text,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }

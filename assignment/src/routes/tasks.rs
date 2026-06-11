@@ -16,7 +16,7 @@ fn cache_key_user(uid: i32) -> String {
     format!("tasks:user:{}", uid)
 }
 
-async fn get_cached_tasks(redis: &mut impl AsyncCommands, key: &str) -> Result<Option<Vec<Task>>, AuthError> {
+async fn get_cached_response(redis: &mut impl AsyncCommands, key: &str) -> Result<Option<ViewMyTasksResponse>, AuthError> {
     let data: Option<String> = redis.get(key).await.map_err(|_| AuthError::Internal)?;
     match data {
         Some(raw) => serde_json::from_str(&raw).map(Some).map_err(|_| AuthError::Internal),
@@ -24,8 +24,8 @@ async fn get_cached_tasks(redis: &mut impl AsyncCommands, key: &str) -> Result<O
     }
 }
 
-async fn set_cached_tasks(redis: &mut impl AsyncCommands, key: &str, items: &[Task]) -> Result<(), AuthError> {
-    let raw = serde_json::to_string(items).map_err(|_| AuthError::Internal)?;
+async fn set_cached_response(redis: &mut impl AsyncCommands, key: &str, resp: &ViewMyTasksResponse) -> Result<(), AuthError> {
+    let raw = serde_json::to_string(resp).map_err(|_| AuthError::Internal)?;
     let _: () = redis.set_ex(key, raw, CACHE_TTL).await.map_err(|_| AuthError::Internal)?;
     Ok(())
 }
@@ -49,6 +49,39 @@ async fn invalidate_task_caches(state: &AppState) -> Result<(), AuthError> {
     Ok(())
 }
 
+fn make_task_view(task: &Task, email: &str) -> TaskView {
+    TaskView {
+        id: task.id,
+        title: task.title.clone(),
+        status: task.status.clone(),
+        priority: task.priority.clone(),
+        assigned_to: email.to_string(),
+    }
+}
+
+fn make_response(user: &AuthUser, task_list: &[Task], cache_hit: bool) -> ViewMyTasksResponse {
+    let task_views: Vec<TaskView> = task_list
+        .iter()
+        .map(|t| make_task_view(t, &user.email))
+        .collect();
+
+    ViewMyTasksResponse {
+        user: UserInfo {
+            email: user.email.clone(),
+            role: user.role.clone(),
+        },
+        tasks: task_views,
+        summary: Summary {
+            total_assigned_tasks: task_list.len(),
+        },
+        cache: CacheInfo { hit: cache_hit },
+    }
+}
+
+fn build_response(user: &AuthUser, task_list: &[Task]) -> ViewMyTasksResponse {
+    make_response(user, task_list, false)
+}
+
 pub async fn create_task(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -64,7 +97,8 @@ pub async fn create_task(
         description: body.description,
         created_by: user.id,
         assigned_to: body.assigned_to,
-        status: "pending".into(),
+        status: "todo".into(),
+        priority: body.priority,
     };
 
     let inserted = diesel::insert_into(crate::schema::tasks::table)
@@ -85,7 +119,7 @@ pub async fn create_task(
 pub async fn view_my_tasks(
     State(state): State<AppState>,
     headers: HeaderMap,
-) -> Result<Json<Vec<Task>>, AuthError> {
+) -> Result<Json<ViewMyTasksResponse>, AuthError> {
     let user = authenticate(&headers, &state).await?;
     let key = cache_key_user(user.id);
 
@@ -95,7 +129,7 @@ pub async fn view_my_tasks(
         .await
         .map_err(|_| AuthError::Internal)?;
 
-    if let Some(cached) = get_cached_tasks(&mut redis, &key).await? {
+    if let Some(cached) = get_cached_response(&mut redis, &key).await? {
         return Ok(Json(cached));
     }
 
@@ -106,9 +140,10 @@ pub async fn view_my_tasks(
         .load::<Task>(&mut conn)
         .map_err(|_| AuthError::Internal)?;
 
-    set_cached_tasks(&mut redis, &key, &list).await?;
+    let resp = build_response(&user, &list);
+    set_cached_response(&mut redis, &key, &resp).await?;
 
-    Ok(Json(list))
+    Ok(Json(resp))
 }
 
 pub async fn assign_task(
