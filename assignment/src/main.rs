@@ -1,4 +1,5 @@
 mod auth;
+mod jwt;
 mod models;
 mod routes;
 mod schema;

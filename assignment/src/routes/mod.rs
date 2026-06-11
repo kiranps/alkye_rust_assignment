@@ -11,7 +11,7 @@ use crate::state::AppState;
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/ping", get(ping::ping_handler))
-        .route("/login", post(login::login_handler))
+        .route("/auth/login", post(login::login_handler))
         .route("/seed/users", post(seed::seed_users_handler))
         .route("/tasks", get(tasks::list_tasks).post(tasks::create_task))
         .route("/tasks/assign", post(tasks::assign_task))

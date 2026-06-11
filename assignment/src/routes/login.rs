@@ -2,7 +2,8 @@ use axum::extract::State;
 use axum::Json;
 use diesel::prelude::*;
 
-use crate::auth::{generate_token, AuthError};
+use crate::auth::AuthError;
+use crate::jwt::create_token;
 use crate::models::{LoginRequest, LoginResponse, User, UserResponse};
 use crate::schema::users::dsl::*;
 use crate::state::AppState;
@@ -22,23 +23,7 @@ pub async fn login_handler(
         return Err(AuthError::Unauthorized);
     }
 
-    let token = generate_token();
-
-    let mut redis_conn = state
-        .redis
-        .get_multiplexed_async_connection()
-        .await
-        .map_err(|_| AuthError::Internal)?;
-
-    let key = format!("session:{}", token);
-    let val = user.id.to_string();
-    redis::cmd("SETEX")
-        .arg(&key)
-        .arg(&val)
-        .arg("86400")
-        .query_async::<()>(&mut redis_conn)
-        .await
-        .map_err(|_| AuthError::Internal)?;
+    let token = create_token(user.id, &user.username, &user.role)?;
 
     Ok(Json(LoginResponse {
         token,
